@@ -1,0 +1,53 @@
+# RAZEX9 self-hosted swap router — systemd unit
+#
+#   sudo install -m 755 raze-router /usr/local/bin/raze-router
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin raze
+#   sudo mkdir -p /var/lib/raze-router && sudo chown raze:raze /var/lib/raze-router
+#   sudo mkdir -p /etc/raze && sudo install -m 600 -o raze raze.env /etc/raze/raze.env
+#   sudo cp raze-router.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now raze-router
+#
+# Watch it come up (the port stays closed until the first route index is built):
+#   journalctl -u raze-router -f
+#   curl -s localhost:8082/health
+
+[Unit]
+Description=RAZEX9 self-hosted swap router
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=raze
+Group=raze
+
+# ONE EnvironmentFile. If you ever add a second and both define the same key,
+# systemd keeps the value from the LAST file — a silent way to run with a flag
+# you believe you changed elsewhere.
+EnvironmentFile=/etc/raze/raze.env
+
+# Must match (or contain) RAZE_CACHE_DIR. Without this systemd runs the process
+# with working directory /, and a relative cache path would try to create /cache.
+WorkingDirectory=/var/lib/raze-router
+
+ExecStart=/usr/local/bin/raze-router
+Restart=on-failure
+RestartSec=5
+
+# The router holds live pool state for every venue it covers. This is the
+# working set on mainnet, not a leak — size it for your coverage. If MemoryMax
+# is too low the kernel OOM-kills the process mid-quote.
+MemoryHigh=12G
+MemoryMax=16G
+LimitNOFILE=65535
+
+# Hardening. ReadWritePaths must list the cache dir, or every snapshot write
+# fails silently and each restart becomes a cold start.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/raze-router
+
+[Install]
+WantedBy=multi-user.target
