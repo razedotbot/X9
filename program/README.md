@@ -15,17 +15,22 @@ off-chain change plus an `add_venue` allowlist entry — **never a redeploy**.
 
 ---
 
-## 1. If you run the router binary, there is nothing to do
+## 1. Two ways to use it
 
-The program is already deployed at the address above and the router already
-uses it. You do not deploy it, fund it, or name it in your config — its id is a
-compile-time constant in the binary, not an environment variable.
-
-One flag is worth knowing:
+The instance above is deployed and the router points at it out of the box, so
+the common case needs no configuration at all. But nothing binds the binary to
+*our* deployment: the router derives the config PDA, the swap-authority pool and
+the invoked program itself from whichever id it is given, so pointing it at your
+own copy is a one-line change, not a fork.
 
 | variable | default | effect |
 |---|---|---|
-| `CPI_PROGRAM` | **on** | route swaps through this program. Absent means on — only `0`/`false`/`no`/`off` disables it. |
+| `RAZE_ROUTER_PROGRAM` | this program id | the RAZEX9 instance every route is built against. Set it to your own deployment and every derivation follows. |
+| `CPI_PROGRAM` | **on** | route swaps through the program at all. Absent means on — only `0`/`false`/`no`/`off` disables it. |
+
+`RAZE_ROUTER_PROGRAM` is read once at startup. A value that is not a valid
+pubkey stops the process rather than falling back, so a typo can never quietly
+route your swaps through someone else's program.
 
 With `CPI_PROGRAM=0` the router falls back to its local assembler for every
 swap: routes still build, but each hop settles independently instead of
@@ -128,16 +133,17 @@ The wire types live in `src/shared.rs`; their borsh layout is the contract.
 
 ---
 
-## 6. Deploying your own instance
+## 6. Running your own instance
 
-Possible, with one caveat worth reading first: **the distributed `raze-router`
-binary will not use it.** The program id is compiled in, so your deployment is
-only reachable from a client you write yourself.
+Everything downstream of the program id is derived from it, so a second
+deployment is a configuration, not a fork. Four steps, and the fourth is what
+makes the binary you already have use it.
 
 1. **Generate a program keypair and point `declare_id!` at it.** The
    `SA_POOL`, `SA_WSOL_ATA` and `CONFIG_ADDRESS` tables in `src/constants.rs`
    are PDAs derived under that id, so they must be regenerated too. The
-   `pda_tables_match_derivation` test fails loudly if you forget.
+   `pda_tables_match_derivation` test fails loudly if you forget — that is what
+   it is there for.
 2. **Build and deploy:**
    ```
    cargo-build-sbf --manifest-path Cargo.toml
@@ -146,10 +152,21 @@ only reachable from a client you write yourself.
 3. **Call `initialize_config` in the same slot as the deploy.** It has static
    seeds and the first caller becomes admin. Prefer `fee_bps = 0`: routes take
    their fee per call, so the config value is inert.
-4. **Allowlist your venues** with `add_venue`, one program id at a time. An
-   allowlisted program is invoked with the authority's signature, so list only
-   programs you have vetted. The token, system and ATA programs and the router
-   itself are refused outright.
+4. **Point the router at it:**
+   ```
+   RAZE_ROUTER_PROGRAM=<your program id>
+   ```
+   From that line on, every route the binary builds — the invoked program, the
+   config PDA it reads, the swap authority it deposits into — is derived under
+   your id. Nothing else changes and nothing needs rebuilding.
+5. **Allowlist your venues** with `add_venue`, one program id at a time. A fresh
+   config starts empty, so until you do this every route fails `VenueNotAllowed`
+   (6008). An allowlisted program is invoked with the authority's signature, so
+   list only programs you have vetted. The token, system and ATA programs and the
+   router itself are refused outright.
+
+Your instance is independent: its own admin, its own venue allowlist, its own
+pause switch, its own swap authorities. It shares nothing with ours but the code.
 
 ---
 
@@ -170,11 +187,6 @@ still pass.
 
 `keys/` is gitignored except `PROGRAM_ID.txt`; no keypair is, or has ever been,
 committed here.
-
-## Status
-
-This program has not been reviewed by a third-party firm. It moves real funds on
-mainnet — form your own view before pointing anything you care about at it.
 
 ## License
 

@@ -14,10 +14,16 @@ anything on-chain — you sign and submit.
 | | |
 |---|---|
 | `raze-router` | the binary, plus `raze-router.service` and `selfhost.example.env` |
-| [`program/`](program/) | source of the on-chain CPI router the binary calls (Apache-2.0). You do not deploy it — it is already live at `RAZEX9pxDuRCrtwR5wxUPAX3pWwAkBzvM8hF2fKaRE9`. Read it to see what your transactions actually execute. |
+| [`program/`](program/) | the on-chain CPI router this binary calls (Apache-2.0), source and all. Read it to see what your transactions execute — or deploy your own copy and point the binary at it with `RAZE_ROUTER_PROGRAM`. |
 | [`sdks/`](sdks/) | Go, Python, Rust and TypeScript clients for the routes this binary serves |
 
-The mainnet program was built from commit `01bbff2`; `program/` is ahead of it
+Our instance is live at `RAZEX9pxDuRCrtwR5wxUPAX3pWwAkBzvM8hF2fKaRE9` and the
+binary uses it by default, so nothing needs configuring. It is a default, not a
+binding: the router derives the config PDA, the swap-authority pool and the
+invoked program from whichever id it is given, so a second deployment is a line
+of env, not a fork. See [`program/README.md`](program/README.md#6-running-your-own-instance).
+
+The mainnet instance was built from commit `01bbff2`; `program/` is ahead of it
 by work that is not deployed yet (`route_unified`, and the wire types that go
 with it). Everything the binary calls today is in both.
 
