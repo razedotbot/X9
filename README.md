@@ -483,6 +483,7 @@ Contact Raze with your license label. When reporting a problem, include:
 - the last 50 log lines,
 - your RPC and gRPC providers (not the keys).
 
-If PumpSwap routes start failing on-chain with error `6053`, ask us for an
-updated build: the live fee-recipient set is refreshed by a fleet-only poller,
-and this binary carries a compiled fallback.
+Pump fee recipients rotate, and both pump venues read the currently authorized
+set straight from their own on-chain global account on every build — through
+your RPC, on this build. A rotation is picked up on the next quote and needs no
+new binary from us.
