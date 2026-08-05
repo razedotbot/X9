@@ -1,0 +1,63 @@
+[package]
+name = "raze-router"
+version = "0.1.0"
+edition = "2021"
+description = "Generic CPI swap router — executes client-built hops under an on-chain safety envelope."
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "raze_router"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+# The deployed .so ships with both of these on.
+#
+# `no-idl` drops the seven anchor IDL handlers and the `anchor:idl`
+# create_with_seed path (which pulls in sol_sha256) — dead weight for a program
+# whose clients encode instructions directly rather than from an on-chain IDL.
+# `no-log-ix-name` silences the per-transaction `Program log: Instruction: …`
+# sol_log, worth ~100 CU on every route. `idl-build` below is a separate compile
+# pass, so generating IDL JSON for humans still works.
+#
+# ⚠️ `no-idl` STUBS IdlCreateAccount/Resize/Close. Before deploying with it,
+# verify no IDL account already exists at the program's `anchor:idl` seed — once
+# this build is live, that account can only be managed again by redeploying an
+# IDL-enabled build.
+default = ["no-idl", "no-log-ix-name"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
+# Minimal feature set: we only use token_interface (Mint/TokenAccount) + the
+# token_2022 transfer_checked CPI. Dropping `associated_token` and
+# `token_2022_extensions` (spl-pod, token-group/metadata interfaces) trims the
+# .so → lower deploy rent.
+anchor-spl = { version = "0.32.1", default-features = false, features = ["mint", "token", "token_2022"] }
+bytemuck = { version = "1", features = ["min_const_generics", "derive"] }
+
+[dev-dependencies]
+solana-program-test = "2.3"
+solana-sdk = "2.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[profile.release]
+overflow-checks = true   # keep: financial program, cheap safety (~2.9k CU)
+# opt-level 3, deliberately not "z". The size-optimized build cost ~29% of this
+# program's per-route compute (~42k CU, measured A/B in an SVM replay with the
+# venue CPI byte-identical) and bought back only ~12% of the .so size. For a
+# program on a hot path, runtime compute beats deploy rent — but check the
+# resulting .so still fits the programdata account already provisioned on-chain,
+# or the upgrade needs an `extend` first.
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true             # drop symbols from the .so
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

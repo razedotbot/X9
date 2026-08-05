@@ -9,6 +9,18 @@ and your own Yellowstone gRPC endpoint.
 It **builds** transactions. It never holds a private key and never sends
 anything on-chain — you sign and submit.
 
+## What is in this repo
+
+| | |
+|---|---|
+| `raze-router` | the binary, plus `raze-router.service` and `selfhost.example.env` |
+| [`program/`](program/) | source of the on-chain CPI router the binary calls (Apache-2.0). You do not deploy it — it is already live at `RAZEX9pxDuRCrtwR5wxUPAX3pWwAkBzvM8hF2fKaRE9`. Read it to see what your transactions actually execute. |
+| [`sdks/`](sdks/) | Go, Python, Rust and TypeScript clients for the routes this binary serves |
+
+The mainnet program was built from commit `01bbff2`; `program/` is ahead of it
+by work that is not deployed yet (`route_unified`, and the wire types that go
+with it). Everything the binary calls today is in both.
+
 ---
 
 ## 1. What you need before you start

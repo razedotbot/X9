@@ -1,0 +1,40 @@
+[toolchain]
+anchor_version = "0.32.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.mainnet]
+raze_router = "RAZEX9pxDuRCrtwR5wxUPAX3pWwAkBzvM8hF2fKaRE9"
+
+[programs.localnet]
+raze_router = "RAZEX9pxDuRCrtwR5wxUPAX3pWwAkBzvM8hF2fKaRE9"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "echo 'use litesvm harness: cargo test --features test-sbf'"
+
+# No devnet/testnet: validate against a local validator forked from mainnet.
+# `anchor test --skip-deploy` after `solana-test-validator` with the clones below,
+# or use the in-crate litesvm harness (tests/) which loads real .so + real account state.
+[test.validator]
+url = "https://api.mainnet-beta.solana.com"
+
+# --- Venue programs cloned from mainnet (allowlisted, executed via CPI) ---
+[[test.validator.clone]]
+address = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"   # PumpSwap (pump-amm)
+[[test.validator.clone]]
+address = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"   # Pump.fun (bonding curve)
+[[test.validator.clone]]
+address = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"   # Raydium CPMM
+[[test.validator.clone]]
+address = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"   # Raydium CLMM
+[[test.validator.clone]]
+address = "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"    # Meteora DAMM v2 (cp-amm)

@@ -1,0 +1,9 @@
+target/
+logs/
+*.log
+.env
+
+# Keypairs. NEVER commit these — a program keypair IS the deploy authority and
+# the deployer keypair holds funds. Only the plaintext program id is tracked.
+keys/*.json
+!keys/PROGRAM_ID.txt
