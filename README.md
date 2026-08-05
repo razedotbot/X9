@@ -1,10 +1,11 @@
 # RAZEX9 — self-hosted Solana swap router
 
-A single binary that quotes and builds Solana swap transactions across ~17 venues
-(Pump.fun / PumpSwap, Raydium AMM V4 / CPMM / CLMM / Launchpad, Meteora DLMM /
-DAMM v1+v2 / DBC, Orca Whirlpool, plus several dark-AMMs), routed through the
-on-chain RAZEX9 CPI router. You run it on your own machine, against your own RPC
-and your own Yellowstone gRPC endpoint.
+A single binary that quotes and builds Solana swap transactions across **20
+venues** — Pump.fun / PumpSwap, Raydium AMM V4 / CPMM / CLMM / LaunchLab, Meteora
+DLMM / DAMM v1+v2 / DBC, Orca Whirlpool, Heaven, Moonit and seven dark-AMMs
+([full list](#venue-coverage)) — routed through the on-chain RAZEX9 CPI router.
+You run it on your own machine, against your own RPC and your own Yellowstone
+gRPC endpoint.
 
 It **builds** transactions. It never holds a private key and never sends
 anything on-chain — you sign and submit.
@@ -244,6 +245,66 @@ It accepts `amount` (raw units; omitted ⇒ 1 SOL), `slippageBps` (default 500),
 `inputMint`, `outputMint`, `maxHops` (1–3), `includeDex`, `excludeDex`, `wallet`
 — and **silently ignores every other query parameter**, including `swapMode`.
 For exact-out, use `POST /swap/sol/instructions` with `"swapMode": "exactOut"`.
+
+### Venue coverage
+
+**20 venues**, up to 3 hops. The middle column is exactly what a quote returns in
+`route[].dex` and exactly what `includeDex` / `excludeDex` match on. Matching
+ignores case, spaces and punctuation — `Raydium AMM V4`, `raydium-amm-v4` and
+`raydiumammv4` are the same token — and `excludeDex` wins over `includeDex`.
+
+| venue | `route[].dex` | also accepted | program |
+|---|---|---|---|
+| Pump.fun (bonding curve) | `PumpFun` | `pump` | `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` |
+| PumpSwap (pAMM) | `PumpSwap` | | `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA` |
+| Raydium AMM V4 | `Raydium AMM V4` | `v4`, `ammv4`, `raydiumv4`, `raydiumamm` | `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8` |
+| Raydium CPMM | `Raydium CPMM` | `cpmm`, `raydiumcpswap` | `CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C` |
+| Raydium CLMM | `Raydium CLMM` | `clmm` | `CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK` |
+| Raydium LaunchLab | `RaydiumLaunchpad` | `launchpad`, `launchlab`, `raydiumlaunchlab` | `LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj` |
+| Meteora DLMM | `Meteora DLMM` | `dlmm` | `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo` |
+| Meteora DAMM v1 | `Meteora DAMM V1` | `dammv1`, `damm1`, `meteoradamm` | `Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB` |
+| Meteora DAMM v2 (cp-amm) | `Meteora DAMM V2` | `dammv2`, `damm2`, `cpamm` | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |
+| Meteora DBC | `Meteora DBC` | `dbc`, `meteoradynamicbondingcurve` | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
+| Orca Whirlpool | `Orca Whirlpool` | `orca`, `whirlpool` | `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc` |
+| Heaven | `Heaven` | | `HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o` |
+| Moonit (Moonshot) | `Moonit` | | `MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG` |
+| SolFi V2 † | `SolFi V2` | | `SV2EYYJyRz2YhfXwXnhNAevDEui5Q6yrfyo13WtupPF` |
+| HumidiFi † ‡ | `HumidiFi` | | `9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp` |
+| ZeroFi † | `ZeroFi` | | `ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY` |
+| Tessera V † | `Tessera V` | | `TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH` |
+| Obric V2 † | `Obric V2` | | `obriQD1zbpyLz95G5n7nJe6a4DPjpFwa5XYPoNm113y` |
+| GoonFi † | `GoonFi` | | `goonuddtQRrWqqn5nFyczVKaie28f3kDkHWkHtURSLE` |
+| Alpha † | `Alpha` | | `ALPHAQmeA7bjrVuccPsYPiCvsi428SNwte66Srvs4pHA` |
+
+⚠️ `pump` resolves to the **bonding curve**, not PumpSwap. To include both, pass
+both: `includeDex=pumpfun,pumpswap`.
+
+An unknown token in `includeDex` is not an error — it simply matches nothing,
+which on an include-list means *no route*. Check your spelling against the middle
+column before concluding a pair is unroutable.
+
+**† Dark-AMMs.** These seven price each fill off-chain and keep their on-chain
+state obfuscated, so there are no reserves to read and no curve to evaluate.
+Instead the router learns a swap instruction per market and direction from your
+Yellowstone stream and replays it with the amount spliced in; the on-chain router
+measures the real delta, and your `slippageBps` is the guard. What that means for
+you: **a dark-AMM market becomes routable only after your router has seen a swap
+on it.** On a cold start `includeDex=humidifi` legitimately returns no route for a
+minute or two while the stream fills in. Captured instructions survive restarts in
+`pool_snapshot.pmm` (see [What it writes to disk](#what-it-writes-to-disk)); the
+observed prices do not, so every restart re-warms.
+
+**‡ HumidiFi is first-hop only.** Its `amount_in` is bound to an off-chain quote
+handle captured for one specific input amount, and every hop after the first is
+executed with the *measured* output of the hop before it — an amount that handle
+never priced. A HumidiFi hop in position 2 or 3 is declined and the router takes
+the next-best route.
+
+Two further dark-AMM programs are watched but never routed — the router records
+their fills and prices nothing through them, because a CPI from RAZEX9 reverts:
+**Quant** (`QuaNtZsgYRe5Z9Bk4LZ4cTD9tbkVoyCNf1R2BN9bBDv`, `Custom 0x9` — its
+caller allowlist does not include the router) and **BisonFi**
+(`BiSoNHVpsVZW2F7rx2eQ59yQwKxzU5NvBcmKshCSUypi`, `MissingRequiredSignature`).
 
 ### Multi-wallet responses: `success: true` is not per-wallet
 
