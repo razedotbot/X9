@@ -34,11 +34,16 @@ ExecStart=/usr/local/bin/raze-router
 Restart=on-failure
 RestartSec=5
 
-# The router holds live pool state for every venue it covers. This is the
-# working set on mainnet, not a leak — size it for your coverage. If MemoryMax
-# is too low the kernel OOM-kills the process mid-quote.
-MemoryHigh=12G
-MemoryMax=16G
+# The router holds live pool state for every venue it covers — expect 1-2 GB
+# resident once warm. This cap is a backstop, not the working set; see "Sizing
+# the box" in the README. Too low and the kernel OOM-kills the process
+# mid-quote, and systemd restarts it cold.
+#
+# Deliberately NO MemoryHigh. Its cgroup reclaim-throttle parks threads in
+# D-state and degrades quoting silently — the process never recovers and never
+# restarts, so you get a router that answers /health while hanging on /quote.
+# MemoryMax fails loudly instead, which is what you want.
+MemoryMax=8G
 LimitNOFILE=65535
 
 # Hardening. ReadWritePaths must list the cache dir, or every snapshot write

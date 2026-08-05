@@ -38,6 +38,7 @@ with it). Everything the binary calls today is in both.
 | **Your own Solana RPC endpoint** | a real paid one — see [Sizing your RPC](#sizing-your-rpc) |
 | **Your own Yellowstone gRPC endpoint** | Helius, Triton, erpc, or your own Geyser plugin |
 | **Linux x86-64**, glibc ≥ 2.34 | Debian 12+, Ubuntu 22.04+, RHEL 9+ — all fine |
+| **4 cores, 8 GB RAM, 2 GB disk** | a small VPS is enough — see [Sizing the box](#sizing-the-box) |
 
 You do **not** need to give us a wallet, and you do not configure one here.
 
@@ -165,10 +166,10 @@ ExecStart=/usr/local/bin/raze-router
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65535
-# The router keeps the live pool state in RAM. Size for your venue coverage;
-# 8-16 GB is a realistic working set on mainnet.
-MemoryHigh=12G
-MemoryMax=16G
+# The router keeps the live pool state in RAM — expect 1-2 GB resident once
+# warm. This cap is a backstop, not the working set. Do NOT add MemoryHigh:
+# see "Sizing the box".
+MemoryMax=8G
 
 [Install]
 WantedBy=multi-user.target
@@ -379,8 +380,8 @@ instructions.
 
 ### Network exposure
 
-`BIND_ADDR` defaults to `0.0.0.0:8082` — **every** interface. That default is
-fleet-shaped (our boxes are firewalled); on your machine it is a decision.
+`BIND_ADDR` defaults to `0.0.0.0:8082` — **every** interface. That default
+assumes a firewall in front of it; on your machine it is a decision.
 
 Anyone who can reach that port can make your node build buy/sell transactions
 without knowing anything, because those two routes need no credential. The
@@ -421,6 +422,39 @@ up as missing routes until the state is rebuilt.
 Neither passes through the license gate, so **a monitor watching only health
 stays green on a router whose trading routes are all 403.** Probe with a real
 quote if you want to know that the product works.
+
+### Sizing the box
+
+A small VPS is enough. The binary is a stateless builder — the only state it
+holds is a cache of live pool accounts.
+
+| | |
+|---|---|
+| CPU | **4 cores** — quoting is cheap; the route index rebuild is the only burst |
+| RAM | **8 GB** — expect 1–2 GB resident once warm, with room to absorb spikes |
+| disk | **2 GB** — the pool snapshot is a few hundred MB and grows with coverage |
+| network | a **continuous** gRPC stream, on the order of 10–20 GB/day |
+
+The sample unit sets `MemoryMax=8G` as a backstop, not as a target.
+
+> **Do not add `MemoryHigh`.** It looks like the gentler of the two caps and it
+> is the more dangerous one: crossing it puts the process into cgroup reclaim
+> throttling, which parks threads in D-state and degrades quoting and stream
+> ingest **silently** — no error, no restart, `/health` still green. `MemoryMax`
+> fails loudly instead: the kernel kills the process and systemd restarts it
+> cold, which is both recoverable and visible.
+
+If resident memory climbs well past a couple of GB and stays there,
+`MALLOC_ARENA_MAX=2` in the environment file is the cheap first thing to try —
+glibc's per-thread arenas fragment under a stream this busy. To hold less
+history, lower `POOL_CACHE_MAX_SLOT_AGE_SECS` (seconds, default 24 h); it trims
+how long a quiet pool stays quotable, so it trades coverage for memory.
+
+What you should **not** size down is either paid feed. The router subscribes to
+every account owned by the venue programs, with no server-side filtering and no
+data slicing, so ask your Yellowstone provider how they bill that shape of
+subscription before you pick a plan. The RPC matters just as much, for a
+different reason:
 
 ### Sizing your RPC
 
